@@ -93,4 +93,50 @@ describe "Help Center", type: :system, js: true do
       end
     end
   end
+
+  describe "article search functionality" do
+    it "filters articles based on search query" do
+      visit "/help"
+
+      # Search for a specific article
+      fill_in "Search articles...", with: "product"
+
+      # Articles matching the search should be visible
+      # Articles not matching should be hidden or in filtered out categories
+      expect(page).to have_css(".highlight", minimum: 1)
+    end
+  end
+
+  describe "article navigation" do
+    it "navigates to an article and shows content" do
+      visit "/help"
+
+      # Find and click the first article link
+      first_article = HelpCenter::Article.first
+      click_on first_article.title
+
+      # Should show the article title and content
+      expect(page).to have_content(first_article.title)
+      # Should have sidebar with category navigation
+      expect(page).to have_css("aside")
+    end
+  end
+
+  describe "category page" do
+    it "shows all articles in a category" do
+      category = HelpCenter::Category.first
+      visit help_center_category_path(category)
+
+      # Should show category title
+      expect(page).to have_content(category.title)
+
+      # Should list all articles in the category
+      category.articles.each do |article|
+        expect(page).to have_content(article.title)
+      end
+
+      # Should have sidebar navigation
+      expect(page).to have_css("aside")
+    end
+  end
 end
