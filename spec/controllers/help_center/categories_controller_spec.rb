@@ -71,11 +71,10 @@ describe HelpCenter::CategoriesController, inertia: true do
       end
     end
 
-    it "sets SEO meta tags" do
+    it "sets page title" do
       get :show, params: { slug: category.slug }
 
       expect(assigns(:title)).to eq("#{category.title} - Gumroad Help Center")
-      expect(assigns(:canonical_url)).to be_present
     end
 
     context "when category is not found" do

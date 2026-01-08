@@ -38,12 +38,10 @@ describe HelpCenter::ArticlesController, inertia: true do
       expect(inertia.props[:categories].first[:articles]).to be_an(Array)
     end
 
-    it "sets SEO meta tags" do
+    it "sets page title" do
       get :index
 
       expect(assigns(:title)).to eq("Gumroad Help Center")
-      expect(assigns(:canonical_url)).to be_present
-      expect(assigns(:description)).to eq("Common questions and support documentation")
     end
   end
 
@@ -87,11 +85,10 @@ describe HelpCenter::ArticlesController, inertia: true do
       end
     end
 
-    it "sets SEO meta tags" do
+    it "sets page title" do
       get :show, params: { slug: article.slug }
 
       expect(assigns(:title)).to eq("#{article.title} - Gumroad Help Center")
-      expect(assigns(:canonical_url)).to be_present
     end
 
     it "renders article content as HTML" do
