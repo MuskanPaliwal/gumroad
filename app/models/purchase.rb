@@ -543,12 +543,20 @@ class Purchase < ApplicationRecord
   scope :for_library, lambda {
     all_success_states
       .not_is_additional_contribution
-      .not_recurring_charge
+      .not_recurring_charge_or_gift_receiver
       .not_is_gift_sender_purchase
       .not_refunded_except_subscriptions
       .not_chargedback_or_chargedback_reversed
       .not_is_archived_original_subscription_purchase
       .not_is_access_revoked
+  }
+  # Similar to not_recurring_charge but also includes gift receiver purchases
+  scope :not_recurring_charge_or_gift_receiver, lambda {
+    where("(purchases.subscription_id IS NULL OR purchases.flags & ? = ?) OR (purchases.flags & ? = ?)",
+          Purchase.flag_mapping["flags"][:is_original_subscription_purchase],
+          Purchase.flag_mapping["flags"][:is_original_subscription_purchase],
+          Purchase.flag_mapping["flags"][:is_gift_receiver_purchase],
+          Purchase.flag_mapping["flags"][:is_gift_receiver_purchase])
   }
   scope :for_sales_api, -> {
     all_success_states_except_preorder_auth_and_gift.exclude_not_charged_except_free_trial

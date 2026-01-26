@@ -264,8 +264,87 @@ describe("Library Scenario", type: :system, js: true) do
     expect(page).to have_status(text: "You have 2 archived purchases. Click here to view")
   end
 
-  describe "gift membership purchases with expired subscriptions" do
-    it "shows archived gift membership even when subscription is not alive" do
+  describe "gift membership purchases" do
+    it "shows gift membership with active subscription in library" do
+      gifter = create(:user, email: "gifter@example.com")
+      giftee = @user
+
+      # Create membership product (recurring billing)
+      membership = create(:membership_product, name: "Premium Membership")
+      gift = create(:gift, link: membership, gifter_email: gifter.email, giftee_email: giftee.email)
+
+      # Create gift receiver purchase with active subscription (not cancelled/expired)
+      giftee_purchase = create(:membership_purchase,
+                               link: membership,
+                               purchaser: giftee,
+                               email: giftee.email,
+                               is_gift_receiver_purchase: true,
+                               purchase_state: "gift_receiver_purchase_successful",
+                               price_cents: 0
+      )
+
+      giftee_purchase.create_url_redirect!
+      gift.update!(giftee_purchase: giftee_purchase)
+
+      Link.import(refresh: true, force: true)
+
+      visit "/library"
+
+      # Should show the gift membership even though it has subscription_id set
+      # and is_original_subscription_purchase is false
+      expect(page).to have_product_card(membership)
+    end
+
+    it "allows archiving and unarchiving gift membership with active subscription" do
+      gifter = create(:user, email: "gifter@example.com")
+      giftee = @user
+
+      membership = create(:membership_product, name: "Premium Membership")
+      gift = create(:gift, link: membership, gifter_email: gifter.email, giftee_email: giftee.email)
+
+      giftee_purchase = create(:membership_purchase,
+                               link: membership,
+                               purchaser: giftee,
+                               email: giftee.email,
+                               is_gift_receiver_purchase: true,
+                               purchase_state: "gift_receiver_purchase_successful",
+                               price_cents: 0
+      )
+
+      giftee_purchase.create_url_redirect!
+      gift.update!(giftee_purchase: giftee_purchase)
+
+      Link.import(refresh: true, force: true)
+
+      visit "/library"
+      expect(page).to have_product_card(membership)
+
+      # Archive the gift membership
+      find_product_card(membership).hover
+      within find_product_card(membership) do
+        find_and_click('[aria-label="Open product action menu"]')
+        click_on "Archive"
+      end
+
+      expect(page).to_not have_product_card(membership)
+      expect(giftee_purchase.reload.is_archived).to eq(true)
+
+      # Visit archived view
+      visit "/library?show_archived_only=true"
+      expect(page).to have_product_card(membership)
+
+      # Unarchive it
+      find_product_card(membership).hover
+      within find_product_card(membership) do
+        find_and_click('[aria-label="Open product action menu"]')
+        click_on "Unarchive"
+      end
+      wait_for_ajax
+
+      expect(giftee_purchase.reload.is_archived).to eq(false)
+    end
+
+    it "shows gift membership even when subscription is cancelled" do
       gifter = create(:user, email: "gifter@example.com")
       giftee = @user
 
@@ -275,12 +354,12 @@ describe("Library Scenario", type: :system, js: true) do
 
       # Create gift receiver purchase with cancelled subscription
       giftee_purchase = create(:membership_purchase,
-        link: membership,
-        purchaser: giftee,
-        email: giftee.email,
-        is_gift_receiver_purchase: true,
-        purchase_state: "gift_receiver_purchase_successful",
-        price_cents: 0
+                               link: membership,
+                               purchaser: giftee,
+                               email: giftee.email,
+                               is_gift_receiver_purchase: true,
+                               purchase_state: "gift_receiver_purchase_successful",
+                               price_cents: 0
       )
 
       # Cancel subscription so it's not alive
@@ -296,7 +375,7 @@ describe("Library Scenario", type: :system, js: true) do
       expect(page).to have_product_card(membership)
     end
 
-    it "allows archiving and unarchiving gift membership with dead subscription" do
+    it "allows archiving and unarchiving gift membership with cancelled subscription" do
       gifter = create(:user, email: "gifter@example.com")
       giftee = @user
 
@@ -304,12 +383,12 @@ describe("Library Scenario", type: :system, js: true) do
       gift = create(:gift, link: membership, gifter_email: gifter.email, giftee_email: giftee.email)
 
       giftee_purchase = create(:membership_purchase,
-        link: membership,
-        purchaser: giftee,
-        email: giftee.email,
-        is_gift_receiver_purchase: true,
-        purchase_state: "gift_receiver_purchase_successful",
-        price_cents: 0
+                               link: membership,
+                               purchaser: giftee,
+                               email: giftee.email,
+                               is_gift_receiver_purchase: true,
+                               purchase_state: "gift_receiver_purchase_successful",
+                               price_cents: 0
       )
 
       giftee_purchase.subscription.update!(cancelled_at: 1.day.ago)

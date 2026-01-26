@@ -351,6 +351,20 @@ describe Purchase, :vcr do
 
         expect(Purchase.for_library).not_to include(purchase)
       end
+
+      it "includes gift receiver purchases with subscription" do
+        membership = create(:membership_product)
+        subscription = create(:subscription, link: membership)
+        gift_receiver_purchase = create(:purchase,
+                                        link: membership,
+                                        subscription: subscription,
+                                        is_gift_receiver_purchase: true,
+                                        is_original_subscription_purchase: false,
+                                        purchase_state: "gift_receiver_purchase_successful"
+        )
+
+        expect(Purchase.for_library).to include(gift_receiver_purchase)
+      end
     end
 
     describe ".for_mobile_listing" do
